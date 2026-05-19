@@ -57,12 +57,10 @@ jobs:
         run: |
           echo "IS_UPDATE=true" >> $GITHUB_ENV
 
-      - name: 添加全量插件源
+      - name: 仅更新官方插件源（移除冲突的kenzok8源）
         if: env.IS_UPDATE == 'true'
         run: |
           cd openwrt
-          sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
-          sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
@@ -84,7 +82,7 @@ jobs:
           echo "CONFIG_TARGET_VIRTUALIZATION=y" >> .config
           make defconfig
 
-      - name: 核心+全屋智能+手机备份全家桶 全部内置（无循环依赖）
+      - name: 核心+全屋智能+手机备份全家桶 全部内置（无冲突依赖）
         if: env.IS_UPDATE == 'true'
         run: |
           cd openwrt
