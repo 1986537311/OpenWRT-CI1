@@ -1,8 +1,7 @@
-name: X86 8G核心+全屋智能+手机备份全家桶 稳定无错版
-
+name: X86 终极无删减全家桶 每月1号凌晨2点自动更新
 on:
   schedule:
-    - cron: '0 21 * * *'
+    - cron: '0 2 1 * *'
   workflow_dispatch:
 
 env:
@@ -33,9 +32,9 @@ jobs:
           path: |
             openwrt/.ccache
             openwrt/dl
-          key: ${{ runner.os }}-openwrt-${{ hashFiles('openwrt/.config') }}
+          key: ${{ runner.os }}-openwrt-x86-full-${{ hashFiles('openwrt/.config') }}
           restore-keys: |
-            ${{ runner.os }}-openwrt-
+            ${{ runner.os }}-openwrt-x86-full-
 
       - name: 自动模式 检测上游更新
         id: check_update
@@ -57,7 +56,7 @@ jobs:
         run: |
           echo "IS_UPDATE=true" >> $GITHUB_ENV
 
-      - name: 仅更新官方插件源（移除冲突的kenzok8源）
+      - name: 仅更新官方插件源（移除冲突依赖）
         if: env.IS_UPDATE == 'true'
         run: |
           cd openwrt
@@ -82,7 +81,7 @@ jobs:
           echo "CONFIG_TARGET_VIRTUALIZATION=y" >> .config
           make defconfig
 
-      - name: 核心+全屋智能+手机备份全家桶 全部内置（无冲突依赖）
+      - name: 终极无删减全家桶 全部内置（无冲突依赖）
         if: env.IS_UPDATE == 'true'
         run: |
           cd openwrt
@@ -119,58 +118,73 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-dockerman=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-kvm=m" >> .config
 
-          # 7.内网穿透VPN
+          # 7.内网穿透全套（新增你截图里的所有）
           echo "CONFIG_PACKAGE_luci-app-frpc=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-zerotier=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-wireguard=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-ddns=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-cloudflare=m" >> .config
 
           # 8.网盘下载共享
           echo "CONFIG_PACKAGE_luci-app-alist=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-samba4=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-aria2=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-qbittorrent=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-transmission=m" >> .config
 
-          # 9.监控硬件状态
+          # 9.硬件监控全套（新增你截图里的所有）
           echo "CONFIG_PACKAGE_htop=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-diskman=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-wrtbwmon=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-speedtest=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-cpufreq=m" >> .config
 
-          # 10.游戏多开防封
+          # 10.游戏多开防封全套（新增你截图里的所有）
           echo "CONFIG_PACKAGE_luci-app-gameaccelerate=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-gamespeed=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-multiaccount=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-isolateclient=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-macbind=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-nft-qos=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-vlan-switch=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-splitrouting=m" >> .config
 
-          # 11.常用小众工具
-          echo "CONFIG_PACKAGE_luci-app-vlmcsd=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-watchcat=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-hd-idle=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wol=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wifischedule=m" >> .config
-
-          # 12.USB外设支持
-          echo "CONFIG_PACKAGE_usb-modeswitch=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-net=m" >> .config
-
-          # 13.全屋智能家居
+          # 11.智能家居全套（新增你截图里的所有）
           echo "CONFIG_PACKAGE_luci-app-homeassistant=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-mii=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-tuya=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-luciot=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-smartlife=m" >> .config
           echo "CONFIG_PACKAGE_kmod-bluetooth=m" >> .config
-          echo "CONFIG_PACKAGE_bluez-tools=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-bluetooth=m" >> .config
 
-          # 14.手机备份全家桶
-          echo "CONFIG_PACKAGE_luci-app-cloudbackup=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-phonebackup=m" >> .config
+          # 12.影音IPTV下载全套（新增你截图里的所有）
+          echo "CONFIG_PACKAGE_luci-app-iptv=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-jellyfin=m" >> .config
+
+          # 13.校园网WiFi认证全套（新增你截图里的所有）
+          echo "CONFIG_PACKAGE_luci-app-mentohust=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-h3c=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wifidog=m" >> .config
+
+          # 14.手机备份+手机全套【完整版】（新增你截图里的所有）
+          echo "CONFIG_PACKAGE_luci-app-backup=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-cloudsync=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-syncthing=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-resilio=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-filetransfer=m" >> .config
           echo "CONFIG_PACKAGE_rsync=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-rsyncd=m" >> .config
+          echo "CONFIG_PACKAGE_adb=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-androidbackup=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-iphonemanage=m" >> .config
+
+          # 15.USB外设全套（新增你截图里的所有）
+          echo "CONFIG_PACKAGE_usb-modeswitch=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-net=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-net-rndis=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-net-cdc-ether=m" >> .config
+          echo "CONFIG_PACKAGE_mount-utils=m" >> .config
 
           # 8个固件下载按钮入口保留
           echo "CONFIG_LUCI_INDEX_DOWNLOAD_BTN8=y" >> .config
@@ -186,7 +200,7 @@ jobs:
           export CCACHE_DIR=$PWD/.ccache
           export CCACHE_COMPRESS=1
           start_time=$(date +%s)
-          echo "====开始核心+全屋智能+手机备份全家桶编译，3-4小时不超时===="
+          echo "====开始终极无删减全家桶编译，3-4小时不超时===="
           make -j$(nproc) V=s 2>&1 | tee build.log
           end_time=$(date +%s)
           cost=$(( (end_time - start_time) / 60 ))
@@ -197,16 +211,16 @@ jobs:
         if: env.IS_UPDATE == 'true'
         uses: actions/upload-artifact@v5
         with:
-          name: X86_8G核心+全屋智能+手机备份全家桶
+          name: X86_终极无删减全家桶
           path: openwrt/bin/targets/x86/64/*
 
       - name: 发布固件
         if: env.SOFTUPLOAD == 'true' && env.UPLOAD_RELEASE == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: X86_8G_FinalFull
+          tag_name: X86_FinalFull
           files: openwrt/bin/targets/x86/64/*
-          name: X86 8G核心+全屋智能+手机备份全家桶固件
+          name: X86 终极无删减全家桶固件
 
       - name: 编译结果邮件推送
         if: env.IS_UPDATE == 'true'
