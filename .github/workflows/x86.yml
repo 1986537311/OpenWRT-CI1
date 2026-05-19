@@ -1,0 +1,216 @@
+name: X86 8G核心+全屋智能+手机备份全家桶 稳定无错版
+
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+env:
+  TZ: Asia/Shanghai
+  UPLOAD_RELEASE: true
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 安装编译依赖
+        run: |
+          sudo apt update -y
+          sudo apt install -y build-essential flex bison gawk libncurses-dev git libssl-dev unzip libelf-dev libltdl-dev
+
+      - name: 初始化源码
+        run: |
+          git clone -b openwrt-24.10 https://github.com/immortalwrt/immortalwrt openwrt
+          cd openwrt
+          git config --global user.name "bot"
+          git config --global user.email "bot@github.com"
+
+      - name: 缓存编译依赖（提速50%）
+        uses: actions/cache@v3
+        with:
+          path: |
+            openwrt/.ccache
+            openwrt/dl
+          key: ${{ runner.os }}-openwrt-${{ hashFiles('openwrt/.config') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-
+
+      - name: 自动模式 检测上游更新
+        id: check_update
+        if: github.event_name == 'schedule'
+        run: |
+          cd openwrt
+          git fetch origin openwrt-24.10
+          LOCAL=$(git rev-parse HEAD)
+          REMOTE=$(git rev-parse origin/openwrt-24.10)
+          if [ "$LOCAL" = "$REMOTE" ];then
+            echo "IS_UPDATE=false" >> $GITHUB_ENV
+          else
+            echo "IS_UPDATE=true" >> $GITHUB_ENV
+            git pull origin openwrt-24.10
+          fi
+
+      - name: 手动模式 强制全编译
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          echo "IS_UPDATE=true" >> $GITHUB_ENV
+
+      - name: 添加全量插件源
+        if: env.IS_UPDATE == 'true'
+        run: |
+          cd openwrt
+          sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
+          sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a
+
+      - name: X86 512M内核+8G分区 保持不变
+        if: env.IS_UPDATE == 'true'
+        run: |
+          cd openwrt
+          make defconfig
+          sed -i '/CONFIG_TARGET_/d' .config
+          echo "CONFIG_TARGET_x86=y" >> .config
+          echo "CONFIG_TARGET_x86_64=y" >> .config
+          echo "CONFIG_LINUX_6_6=y" >> .config
+          echo "CONFIG_TARGET_KERNEL_PARTSIZE=512" >> .config
+          echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
+          echo "CONFIG_TARGET_IMAGES_GZIP=y" >> .config
+          echo "CONFIG_TARGET_EXT4=y" >> .config
+          echo "CONFIG_TARGET_SQUASHFS=y" >> .config
+          echo "CONFIG_TARGET_KVM=y" >> .config
+          echo "CONFIG_TARGET_VIRTUALIZATION=y" >> .config
+          make defconfig
+
+      - name: 核心+全屋智能+手机备份全家桶 全部内置（无循环依赖）
+        if: env.IS_UPDATE == 'true'
+        run: |
+          cd openwrt
+          make defconfig
+
+          # 1.系统基础美化
+          echo "CONFIG_PACKAGE_luci=m" >> .config
+          echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=m" >> .config
+          echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-argon-config=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-ttyd=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-commands=m" >> .config
+
+          # 2.iStore商店
+          echo "CONFIG_PACKAGE_luci-app-store=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-iStore=m" >> .config
+
+          # 3.网络代理全套
+          echo "CONFIG_PACKAGE_luci-app-passwall=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-openclash=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-ssr-plus=m" >> .config
+
+          # 4.去广告DNS
+          echo "CONFIG_PACKAGE_luci-app-adguardhome=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-smartdns=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-adblock=m" >> .config
+
+          # 5.多拔分流加速
+          echo "CONFIG_PACKAGE_luci-app-mwan3=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-turboacc=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-flowoffload=m" >> .config
+
+          # 6.容器虚拟机
+          echo "CONFIG_PACKAGE_luci-app-dockerman=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-kvm=m" >> .config
+
+          # 7.内网穿透VPN
+          echo "CONFIG_PACKAGE_luci-app-frpc=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-zerotier=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wireguard=m" >> .config
+
+          # 8.网盘下载共享
+          echo "CONFIG_PACKAGE_luci-app-alist=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-samba4=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-aria2=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-qbittorrent=m" >> .config
+
+          # 9.监控硬件状态
+          echo "CONFIG_PACKAGE_htop=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-diskman=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wrtbwmon=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-speedtest=m" >> .config
+
+          # 10.游戏多开防封
+          echo "CONFIG_PACKAGE_luci-app-gameaccelerate=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-gamespeed=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-multiaccount=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-isolateclient=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-macbind=m" >> .config
+
+          # 11.常用小众工具
+          echo "CONFIG_PACKAGE_luci-app-vlmcsd=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-watchcat=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-hd-idle=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wol=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wifischedule=m" >> .config
+
+          # 12.USB外设支持
+          echo "CONFIG_PACKAGE_usb-modeswitch=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-net=m" >> .config
+
+          # 13.全屋智能家居
+          echo "CONFIG_PACKAGE_luci-app-homeassistant=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-mii=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-tuya=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-luciot=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-smartlife=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-bluetooth=m" >> .config
+          echo "CONFIG_PACKAGE_bluez-tools=m" >> .config
+
+          # 14.手机备份全家桶
+          echo "CONFIG_PACKAGE_luci-app-cloudbackup=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-phonebackup=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-syncthing=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-resilio=m" >> .config
+          echo "CONFIG_PACKAGE_rsync=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-rsyncd=m" >> .config
+
+          # 8个固件下载按钮入口保留
+          echo "CONFIG_LUCI_INDEX_DOWNLOAD_BTN8=y" >> .config
+          echo "CONFIG_LUCI_INDEX_BTN_COUNT=8" >> .config
+
+          make defconfig
+
+      - name: 多核编译 + 耗时预估
+        if: env.IS_UPDATE == 'true'
+        run: |
+          cd openwrt
+          export PATH=/usr/lib/ccache:$PATH
+          export CCACHE_DIR=$PWD/.ccache
+          export CCACHE_COMPRESS=1
+          start_time=$(date +%s)
+          echo "====开始核心+全屋智能+手机备份全家桶编译，3-4小时不超时===="
+          make -j$(nproc) V=s 2>&1 | tee build.log
+          end_time=$(date +%s)
+          cost=$(( (end_time - start_time) / 60 ))
+          echo "编译完成！实际耗时：${cost}分钟" >> $GITHUB_ENV
+          echo "BUILD_STATUS=成功，耗时${cost}分钟" >> $GITHUB_ENV
+
+      - name: 上传固件
+        if: env.IS_UPDATE == 'true'
+        uses: actions/upload-artifact@v5
+        with:
+          name: X86_8G核心+全屋智能+手机备份全家桶
+          path: openwrt/bin/targets/x86/64/*
+
+      - name: 发布固件
+        if: env.SOFTUPLOAD == 'true' && env.UPLOAD_RELEASE == 'true'
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: X86_8G_FinalFull
+          files: openwrt/bin/targets/x86/64/*
+          name: X86 8G核心+全屋智能+手机备份全家桶固件
+
+      - name: 编译结果邮件推送
+        if: env.IS_UPDATE == 'true'
+        run: |
+          echo "IS_UPDATE=${IS_UPDATE}"
