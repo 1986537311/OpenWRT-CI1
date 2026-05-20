@@ -7,10 +7,10 @@ on:
 env:
   TZ: Asia/Shanghai
 
+# 修正权限配置，只保留合法权限
 permissions:
   actions: write
   contents: read
-  notifications: write
 
 jobs:
   build:
@@ -70,10 +70,12 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
+          # 8G系统分区 + 512M交换分区
           echo "CONFIG_TARGET_KERNEL_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_SWAP_PARTSIZE=512" >> .config
 
+          # 完整全套插件
           echo "CONFIG_PACKAGE_luci=m" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=m" >> .config
           echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
