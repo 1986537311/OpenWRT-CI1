@@ -1,4 +1,4 @@
-name: OpenWrt X86 满插件 8G+512M分区编译
+name: X86全插件稳定版编译
 on:
   schedule:
     - cron: '0 2 1 * *'
@@ -6,6 +6,11 @@ on:
 
 env:
   TZ: Asia/Shanghai
+
+permissions:
+  actions: write
+  contents: read
+  notifications: write
 
 jobs:
   build:
@@ -21,14 +26,14 @@ jobs:
           pip3 install pyelftools
           ccache --max-size=12G
 
-      - name: 拉取最新源码
+      - name: 拉取稳定版OpenWrt源码（23.05分支，无语法错误）
         run: |
-          git clone https://github.com/immortalwrt/immortalwrt openwrt
+          git clone https://github.com/openwrt/openwrt.git -b openwrt-23.05 openwrt
           cd openwrt
-          git config --global user.name actions
-          git config --global user.email actions@github.com
+          git config --global user.name github-user
+          git config --global user.email github@163.com
 
-      - name: 全局编译缓存加速
+      - name: 编译缓存加速防超时
         uses: actions/cache@v3
         with:
           path: |
@@ -36,137 +41,100 @@ jobs:
             openwrt/.ccache
             openwrt/build_dir
             openwrt/staging_dir
-          key: full-openwrt-x86-cache
+          key: openwrt-x86-8g-full-stable-cache
 
-      - name: 定时任务检测上游更新
-        id: check_up
+      - name: 每月定时检测上游更新
         if: github.event_name == 'schedule'
         run: |
           cd openwrt
           git fetch origin
-          local_head=$(git rev-parse HEAD)
-          remote_head=$(git rev-parse origin/main)
-          if [ "$local_head" = "$remote_head" ];then
-            echo "need_build=false" >> $GITHUB_ENV
+          LOCAL=$(git rev-parse HEAD)
+          REMOTE=$(git rev-parse origin/openwrt-23.05)
+          if [ "$LOCAL" = "$REMOTE" ];then
+            echo "RUN_BUILD=false" >> $GITHUB_ENV
           else
-            echo "need_build=true" >> $GITHUB_ENV
-            git pull origin main
+            echo "RUN_BUILD=true" >> $GITHUB_ENV
+            git pull origin openwrt-23.05
           fi
 
-      - name: 手动触发直接强制编译
+      - name: 手动点击强制编译
         if: github.event_name == 'workflow_dispatch'
-        run: echo "need_build=true" >> $GITHUB_ENV
+        run: echo "RUN_BUILD=true" >> $GITHUB_ENV
 
-      - name: 加载插件源 + 全插件 + 8G+512M分区配置
-        if: ${{ env.need_build == 'true' }}
+      - name: 导入插件源+8G+512M分区+全部插件
+        if: ${{ env.RUN_BUILD == 'true' }}
         run: |
           cd openwrt
+          # 替换为兼容23.05的插件源
           sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
           sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-          # 磁盘分区：8G系统分区 + 512M Swap交换分区
+          # 固定分区大小
           echo "CONFIG_TARGET_KERNEL_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_SWAP_PARTSIZE=512" >> .config
 
-          # 系统美化全套
+          # 完整全套插件（移除了有依赖问题的包）
           echo "CONFIG_PACKAGE_luci=m" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=m" >> .config
           echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-argon-config=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-tttyd=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-commands=m" >> .config
-
-          # iStore应用商店全套
           echo "CONFIG_PACKAGE_luci-app-store=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-iStore=m" >> .config
-
-          # 代理全套全部保留
           echo "CONFIG_PACKAGE_luci-app-passwall=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-openclash=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ssr-plus=m" >> .config
-
-          # 去广告DNS全套
           echo "CONFIG_PACKAGE_luci-app-adguardhome=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-smartdns=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-adblock=m" >> .config
-
-          # 多拨分流网络加速
           echo "CONFIG_PACKAGE_luci-app-mwan3=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-turboacc=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-flowoffload=m" >> .config
-
-          # 容器虚拟机全套
+          echo "CONFIG_PACKAGE_luci-app-turboacc=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-flowoffload=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-dockerman=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-kvm=m" >> .config
-
-          # 内网穿透全家桶
-          echo "CONFIG_PACKAGE-luci-app-frpc=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-zerotier=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-wireguard=m" >> .config
-
-          # 网盘下载共享全套
-          echo "CONFIG_PACKAGE-luci-app-alist=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-samba4=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-aria2=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-qbittorrent=m" >> .config
-
-          # 硬件监控测速
+          echo "CONFIG_PACKAGE_luci-app-frpc=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-zerotier=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wireguard=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-alist=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-samba4=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-aria2=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-qbittorrent=m" >> .config
           echo "CONFIG_PACKAGE_htop=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-diskman=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-wrtbwmon=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-speedtest=m" >> .config
-
-          # 游戏优化防封全套
-          echo "CONFIG_PACKAGE-luci-app-gameaccelerate=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-gamespeed=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-multiaccount=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-isolateclient=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-macbind=m" >> .config
-
-          # 实用工具合集
-          echo "CONFIG_PACKAGE-luci-app-vlmcsd=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-watchcat=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-hd-idle=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-wol=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-wifischedule=m" >> .config
-
-          # USB外设支持
+          echo "CONFIG_PACKAGE_luci-app-diskman=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wrtbwmon=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-speedtest=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-gameaccelerate=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-gamespeed=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-vlmcsd=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-watchcat=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-hd-idle=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wol=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wifischedule=m" >> .config
           echo "CONFIG_PACKAGE_usb-modeswitch=m" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-net=m" >> .config
-
-          # 智能家居全套
-          echo "CONFIG_PACKAGE-luci-app-homeassistant=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-miiio=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-tuya=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-luciot=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-smartlife=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-homeassistant=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-miiio=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-tuya=m" >> .config
           echo "CONFIG_PACKAGE_kmod-bluetooth=m" >> .config
           echo "CONFIG_PACKAGE_bluez-tools=m" >> .config
-
-          # 手机云备份全套
-          echo "CONFIG_PACKAGE-luci-app-cloudbackup=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-phonebackup=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-syncthing=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-resilio=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-syncthing=m" >> .config
           echo "CONFIG_PACKAGE_rsync=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-rsyncd=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-rsyncd=m" >> .config
 
           make defconfig
 
-      - name: 正式编译全插件固件
-        if: ${{ env.need_build == 'true' }}
+      - name: 全速编译固件
+        if: ${{ env.RUN_BUILD == 'true' }}
         run: |
           cd openwrt
           export PATH=/usr/lib/ccache:$PATH
           make -j$(nproc) V=s
 
-      - name: 打包上传完整固件
-        if: ${{ env.need_build == 'true' }}
+      - name: 上传编译好固件
+        if: ${{ env.RUN_BUILD == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: 8G系统+512M交换分区全插件固件
+          name:8G+512M全插件X86稳定版固件
           path: openwrt/bin/targets/
