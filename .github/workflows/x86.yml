@@ -1,7 +1,8 @@
 name: X86 8G核心+全屋智能+手机备份全家桶 稳定无错版
+
 on:
   schedule:
-    - cron: '0 2 1 * *'
+    - cron: '0 21 * * *'
   workflow_dispatch:
 
 env:
@@ -9,16 +10,15 @@ env:
   UPLOAD_RELEASE: true
 
 jobs:
-  build:
-    runs-on: ubuntu-22.04-4core
-    timeout-minutes: 240
+  prepare:
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v5
 
       - name: 安装编译依赖
         run: |
           sudo apt update -y
-          sudo apt install -y build-essential flex bison gawk libncurses-dev git libssl-dev unzip libelf-dev libltdl-dev ccache
+          sudo apt install -y build-essential flex bison gawk libncurses-dev git libssl-dev unzip libelf-dev libltdl-dev
 
       - name: 初始化源码
         run: |
@@ -27,15 +27,15 @@ jobs:
           git config --global user.name "bot"
           git config --global user.email "bot@github.com"
 
-      - name: 缓存编译依赖（提速50%）
+      - name: 缓存依赖
         uses: actions/cache@v3
         with:
           path: |
             openwrt/.ccache
             openwrt/dl
-          key: ${{ runner.os }}-openwrt-${{ hashFiles('openwrt/.config') }}
+          key: ${{ runner.os }}-openwrt-prepare-${{ hashFiles('openwrt/.config') }}
           restore-keys: |
-            ${{ runner.os }}-openwrt-
+            ${{ runner.os }}-openwrt-prepare-
 
       - name: 自动模式 检测上游更新
         id: check_update
@@ -57,7 +57,7 @@ jobs:
         run: |
           echo "IS_UPDATE=true" >> $GITHUB_ENV
 
-      - name: 添加第三方插件源
+      - name: 添加全量插件源
         if: env.IS_UPDATE == 'true'
         run: |
           cd openwrt
@@ -84,7 +84,7 @@ jobs:
           echo "CONFIG_TARGET_VIRTUALIZATION=y" >> .config
           make defconfig
 
-      - name: 核心+全屋智能+手机备份全家桶 全部内置（无冲突依赖）
+      - name: 核心+全屋智能+手机备份全家桶 全部内置（无循环依赖）
         if: env.IS_UPDATE == 'true'
         run: |
           cd openwrt
@@ -130,9 +130,10 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-alist=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-samba4=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-aria2=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-qbittorrent=m" >> .config
 
-          # 9.硬件监控状态
-          echo "CONFIG_PACKAGE_luci-app-htop=m" >> .config
+          # 9.监控硬件状态
+          echo "CONFIG_PACKAGE_htop=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-diskman=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-wrtbwmon=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-speedtest=m" >> .config
@@ -144,65 +145,108 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-isolateclient=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-macbind=m" >> .config
 
-          # 11.全屋智能全家桶
+          # 11.常用小众工具
+          echo "CONFIG_PACKAGE_luci-app-vlmcsd=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-watchcat=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-hd-idle=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wol=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-wifischedule=m" >> .config
+
+          # 12.USB外设支持
+          echo "CONFIG_PACKAGE_usb-modeswitch=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-usb-net=m" >> .config
+
+          # 13.全屋智能全家桶
           echo "CONFIG_PACKAGE_luci-app-homeassistant=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-miio=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-tuya=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-luciot=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-smartlife=m" >> .config
           echo "CONFIG_PACKAGE_kmod-bluetooth=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-bluetooth=m" >> .config
+          echo "CONFIG_PACKAGE_bluez-tools=m" >> .config
 
-          # 12.手机备份全家桶
+          # 14.手机备份全家桶
           echo "CONFIG_PACKAGE_luci-app-cloudbackup=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-phonebackup=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-syncthing=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-rsync=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-rsyncd=m" >> .config
 
-          # 13.USB外设支持
-          echo "CONFIG_PACKAGE_usb-modeswitch=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-net=m" >> .config
-
-          # 首页快捷按钮
+          # 固件下载按钮
           echo "CONFIG_LUCI_INDEX_DOWNLOAD_BTN=y" >> .config
           echo "CONFIG_LUCI_INDEX_BTN_COUNT=8" >> .config
 
           make defconfig
+          # 关键优化：预下载所有依赖，编译时不再边编边下
+          make download -j$(nproc)
+
+      - name: 上传准备阶段缓存
+        uses: actions/upload-artifact@v5
+        with:
+          name: openwrt-prepare
+          path: |
+            openwrt/.config
+            openwrt/dl
+            openwrt/.ccache
+
+  build:
+    needs: prepare
+    runs-on: ubuntu-22.04
+    timeout-minutes: 360  # 拉满6小时上限
+    if: env.IS_UPDATE == 'true'
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: 下载准备阶段缓存
+        uses: actions/download-artifact@v5
+        with:
+          name: openwrt-prepare
+          path: openwrt
+
+      - name: 缓存编译依赖
+        uses: actions/cache@v3
+        with:
+          path: |
+            openwrt/.ccache
+            /home/runner/work/_temp/ccache
+          key: ${{ runner.os }}-openwrt-build-${{ hashFiles('openwrt/.config') }}
+          restore-keys: |
+            ${{ runner.os }}-openwrt-build-
 
       - name: 多核编译 + 耗时预估
-        if: env.IS_UPDATE == 'true'
         run: |
           cd openwrt
-          export CCACHE_DIR=$(pwd)/.ccache
-          export PATH="/usr/lib/ccache:$PATH"
+          # 开启并行编译，拉满所有CPU核心
+          export MAKEFLAGS="-j$(nproc)"
+          # 配置ccache缓存，加速二次编译
+          export CCACHE_DIR=/home/runner/work/_temp/ccache
+          export PATH=/usr/lib/ccache:$PATH
           export CCACHE_COMPRESS=1
+          export CCACHE_MAXSIZE=10G
           start_time=$(date +%s)
-          echo "====开始编译 无删减全家桶 build-4小时不超时==="
-          make -j$(nproc) V=s 2>&1 | tee build.log
+          echo "开始编译X86 8核全家桶固件，预计3-4小时"
+          # 降低日志冗余，只输出警告和错误
+          make -j$(nproc) V=w 2>&1 | tee build.log
           end_time=$(date +%s)
           cost=$(( (end_time - start_time) / 60 ))
           echo "BUILD_STATUS=成功，耗时${cost}分钟" >> $GITHUB_ENV
 
       - name: 上传固件
-        if: env.IS_UPDATE == 'true'
         uses: actions/upload-artifact@v5
         with:
-          name: X86 8G核心+全屋智能+手机备份全家桶
-          path: openwrt/bin/targets/x86/64/*
+          name: X86_8G核心+全屋智能+手机备份全家桶
+          path: openwrt/bin/targets/x86/64/
 
-      - name: 发布固件到Release
-        if: env.IS_UPDATE == 'true' && env.UPLOAD_RELEASE == 'true'
+      - name: 发布固件
+        if: env.UPLOAD_RELEASE == 'true'
         uses: softprops/action-gh-release@v1
         with:
-          tag_name: X86_FinalFull
-          name: X86 终极无删减全家桶固件
+          tag_name: X86-8G-FinalFull
+          name: X86 8G核心+全屋智能+手机备份全家桶固件
           files: openwrt/bin/targets/x86/64/*
 
-      - name: 上传编译日志
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: 编译运行日志
-          path: openwrt/build.log
+      - name: 编译结果邮件推送
+        if: env.IS_UPDATE == 'true'
+        run: |
+          sendmail -f "github.actions.com" -t "1986537311@qq.com" -u "OpenWrt编译通知: ${{ env.BUILD_STATUS }}" -m "固件编译完成，耗时已记录。"
