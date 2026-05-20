@@ -26,7 +26,7 @@ jobs:
           pip3 install pyelftools
           ccache --max-size=12G
 
-      - name: 拉取稳定版OpenWrt源码（23.05分支，无语法错误）
+      - name: 拉取稳定版OpenWrt源码
         run: |
           git clone https://github.com/openwrt/openwrt.git -b openwrt-23.05 openwrt
           cd openwrt
@@ -65,18 +65,15 @@ jobs:
         if: ${{ env.RUN_BUILD == 'true' }}
         run: |
           cd openwrt
-          # 替换为兼容23.05的插件源
           sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
           sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-          # 固定分区大小
           echo "CONFIG_TARGET_KERNEL_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_SWAP_PARTSIZE=512" >> .config
 
-          # 完整全套插件（移除了有依赖问题的包）
           echo "CONFIG_PACKAGE_luci=m" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=m" >> .config
           echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
@@ -136,5 +133,5 @@ jobs:
         if: ${{ env.RUN_BUILD == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name:8G+512M全插件X86稳定版固件
+          name: 8G+512M全插件X86稳定版固件
           path: openwrt/bin/targets/
