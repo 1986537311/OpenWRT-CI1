@@ -19,21 +19,27 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: 全套编译依赖
+      - name: 释放多余磁盘空间
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo apt-get clean
+          df -h
+
+      - name: 安装全套编译依赖
         run: |
           sudo apt update -y
           sudo apt install -y build-essential flex bison gawk libncurses-dev git libssl-dev ccache libxml-parser-perl curl unzip p7zip-full
           pip3 install pyelftools
           ccache --max-size=16G
 
-      - name: 拉取最新25.12.4源码
+      - name: 拉取25.12最新稳定源码
         run: |
           git clone https://github.com/openwrt/openwrt.git -b openwrt-25.12 openwrt
           cd openwrt
           git config --global user.name github-auto
           git config --global user.email github@qq.com
 
-      - name: 超级编译缓存加速
+      - name: 高速编译缓存
         uses: actions/cache@v3
         with:
           path: |
@@ -45,7 +51,7 @@ jobs:
           key: openwrt-2512-all-${{ hashFiles('openwrt/.config') }}
           restore-keys: openwrt-2512-all-
 
-      - name: 定时检测更新自动编译
+      - name: 定时检测上游自动更新
         if: github.event_name == 'schedule'
         run: |
           cd openwrt
@@ -58,7 +64,7 @@ jobs:
         if: github.event_name == 'workflow_dispatch'
         run: echo "RUN_BUILD=true" >> $GITHUB_ENV
 
-      - name: 双插件源+全集插件写入
+      - name: 写入全部完整插件配置
         if: ${{ env.RUN_BUILD == 'true' }}
         run: |
           cd openwrt
@@ -67,12 +73,10 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-          # 分区固定 8G系统 +512M交换
           echo "CONFIG_TARGET_KERNEL_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_SWAP_PARTSIZE=512" >> .config
 
-          # 基础系统+中文+主题
           echo "CONFIG_PACKAGE_luci=m" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=m" >> .config
           echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
@@ -82,123 +86,106 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-cron=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-commands=m" >> .config
 
-          # iStore应用商店全套
           echo "CONFIG_PACKAGE_luci-app-store=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-iStore=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-iStore=m" >> .config
 
-          # 代理全套全家桶
           echo "CONFIG_PACKAGE_luci-app-passwall=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-openclash=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ssr-plus=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-hysteria=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-v2raya=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-openclash=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-ssr-plus=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-hysteria=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-v2raya=m" >> .config
 
-          # 去广告+DNS全套
-          echo "CONFIG_PACKAGE_luci-app-adguardhome=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-smartdns=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-adblock=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-dnsfilter=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-adguardhome=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-smartdns=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-adblock=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-dnsfilter=m" >> .config
 
-          # 多线多拨+分流加速
-          echo "CONFIG_PACKAGE_luci-app-mwan3=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-turboacc=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-flowoffload=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-syncdial=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-multiwan=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-mwan3=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-turboacc=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-flowoffload=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-syncdial=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-multiwan=m" >> .config
 
-          # 容器Docker+虚拟机
-          echo "CONFIG_PACKAGE_luci-app-dockerman=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-kvm=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-lxc=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-dockerman=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-kvm=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-lxc=m" >> .config
 
-          # 内网穿透全品类
-          echo "CONFIG_PACKAGE_luci-app-frpc=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-zerotier=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wireguard=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-nps=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-frpc=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-zerotier=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-wireguard=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-nps=m" >> .config
 
-          # 下载+网盘+共享
-          echo "CONFIG_PACKAGE_luci-app-alist=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-samba4=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-aria2=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-qbittorrent=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-transmission=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-alist=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-samba4=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-aria2=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-qbittorrent=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-transmission=m" >> .config
 
-          # 硬件状态+测速监控
           echo "CONFIG_PACKAGE_htop=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-diskman=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wrtbwmon=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-speedtest-web=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-netspeedtest=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-cpulimit=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-diskman=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-wrtbwmon=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-speedtest-web=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-netspeedtest=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-cpulimit=m" >> .config
 
-          # 游戏多开隔离防封全套
-          echo "CONFIG_PACKAGE_luci-app-gameaccelerate=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-multiaccount=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-isolateclient=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-macbind=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ipbind=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-gameaccelerate=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-multiaccount=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-isolateclient=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-macbind=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-ipbind=m" >> .config
 
-          # 定时管理全套
-          echo "CONFIG_PACKAGE_luci-app-autoreboot=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-rebootschedule=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-watchcat=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-hd-idle=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wol=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-autoreboot=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-rebootschedule=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-watchcat=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-hd-idle=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-wol=m" >> .config
 
-          # 系统激活+工具
-          echo "CONFIG_PACKAGE_luci-app-vlmcsd=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-filetransfer=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-logview=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-qos=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-portforward=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-parentcontrol=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-urlfilter=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-ipsec-vpn=m" >> .config
 
-          # 网络管控全套
-          echo "CONFIG_PACKAGE_luci-app-qos=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-portforward=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-parentcontrol=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-urlfilter=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ipsec-vpn=m" >> .config
-
-          # 手机USB网络共享全驱动
           echo "CONFIG_PACKAGE_usb-modeswitch=m" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-net=m" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-net-rndis=m" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-net-cdc-ether=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-hid=m" >> .config
+          echo "CONFIG_PACKAGE_kmod-kmod-usb-hid=m" >> .config
 
-          # 智能家居全套
-          echo "CONFIG_PACKAGE_luci-app-homeassistant=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-miio=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-tuya=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-luciot=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-homeassistant=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-miio=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-tuya=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-luciot=m" >> .config
 
-          # 同步备份全套
-          echo "CONFIG_PACKAGE_luci-app-syncthing=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-resilio=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-syncthing=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-resilio=m" >> .config
           echo "CONFIG_PACKAGE_rsync=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-rsyncd=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-rsyncd=m" >> .config
 
-          # 消息推送全平台
-          echo "CONFIG_PACKAGE_luci-app-wechatpush=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-dingtalk=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-telegram=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-wechatpush=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-dingtalk=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-telegram=m" >> .config
 
-          # 网页下载按钮
+          echo "CONFIG_PACKAGE-luci-app-vlmcsd=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-filetransfer=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-logview=m" >> .config
+
           echo "CONFIG_LUCI_INDEX_DOWNLOAD_BTN8=y" >> .config
           echo "CONFIG_LUCI_INDEX_BTN_COUNT=8" >> .config
 
           make defconfig
 
-      - name: 全速无日志编译
+      - name: 全速极限编译
         if: ${{ env.RUN_BUILD == 'true' }}
         run: |
           cd openwrt
           export PATH=/usr/lib/ccache:$PATH
           export CCACHE_DIR=$(pwd)/.ccache
           export CCACHE_MAXSIZE=16G
-          make -j$(nproc)
+          make -j$(nproc) -O V=sc
 
-      - name: 上传终极固件
+      - name: 最新方式保存上传固件
         if: ${{ env.RUN_BUILD == 'true' }}
         uses: actions/upload-artifact@v4
         with:
@@ -212,7 +199,7 @@ jobs:
           script: |
             const st = context.jobStatus === 'success' ? '✅编译成功' : '❌编译失败';
             const time = new Date().toLocaleString();
-            const body = '【25.12.4终极满配固件】\n状态：' + st + '\n定时任务：每月1号凌晨2点\n架构：X86 64位\n插件：全网最全合集\n编译时间：' + time;
+            const body = '【25.12.4终极满配固件】\n状态：'+st+'\n定时任务：每月1号凌晨2点\n架构：X86 64位\n插件：全网最全合集\n编译时间：'+time;
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -220,7 +207,7 @@ jobs:
               body: body
             })
 
-      - name: 第三方消息推送
+      - name: 第三方消息推送通知
         if: always()
         run: |
           curl -s "https://push.ft07.com/send/替换你的推送密钥.send?title=25.12.4全集固件完成&desp=OpenWrt最新完整版所有插件已全部编译完毕"
