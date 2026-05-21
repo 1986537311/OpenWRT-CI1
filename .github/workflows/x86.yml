@@ -1,4 +1,4 @@
-name: X86满配OpenWrt每月编译
+name: X86满配OpenWrt每月编译（稳过版）
 on:
   schedule:
     - cron: '0 2 1 * *'
@@ -26,15 +26,15 @@ jobs:
           sudo apt install -y build-essential flex bison gawk libssl-dev libelf-dev
           pip3 install pyelftools
 
-      - name: 拉取OpenWrt源码（GitHub官方镜像）
+      - name: 拉取OpenWrt源码（GitHub官方）
         run: |
           git clone https://github.com/openwrt/openwrt.git -b ${{env.BRANCH}} openwrt
 
-      - name: 配置国内全插件源（修复版）
+      - name: 配置GitHub镜像插件源（稳拉版）
         run: |
           cd openwrt
-          echo "src-git kenzo https://gitlab.com/chenmozhijin/openwrt-packages.git" >> feeds.conf.default
-          echo "src-git small https://gitlab.com/chenmozhijin/small.git" >> feeds.conf.default
+          echo "src-git kenzo https://github.com/kenzok8/openwrt-packages.git" >> feeds.conf.default
+          echo "src-git small https://github.com/kenzok8/small.git" >> feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
