@@ -45,7 +45,7 @@ jobs:
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_SWAP_PARTSIZE=512" >> .config
 
-          cat >> .config <<EOF
+          cat >> .config <<'EOF'
 CONFIG_PACKAGE_luci=m
 CONFIG_PACKAGE_luci-i18n-base-zh-cn=m
 CONFIG_PACKAGE_luci-theme-argon=m
@@ -55,68 +55,68 @@ CONFIG_PACKAGE_luci-app-cron=m
 CONFIG_PACKAGE_luci-app-commands=m
 CONFIG_PACKAGE_luci-app-store=m
 CONFIG_PACKAGE_luci-app-iStore=m
-CONFIG_PACKAGE-luci-app-passwall=m
-CONFIG_PACKAGE-luci-app-openclash=m
-CONFIG_PACKAGE-luci-app-ssr-plus=m
-CONFIG_PACKAGE-luci-app-hysteria=m
-CONFIG_PACKAGE-luci-app-v2raya=m
-CONFIG_PACKAGE-luci-app-adguardhome=m
-CONFIG_PACKAGE-luci-app-smartdns=m
-CONFIG_PACKAGE-luci-app-adblock=m
-CONFIG_PACKAGE-luci-app-dnsfilter=m
-CONFIG_PACKAGE-luci-app-mwan3=m
-CONFIG_PACKAGE-luci-app-turboccm=m
-CONFIG_PACKAGE-luci-app-flowoffload=m
-CONFIG_PACKAGE-luci-app-syncdial=m
-CONFIG_PACKAGE-luci-app-multiwan=m
-CONFIG_PACKAGE-luci-app-dockerman=m
-CONFIG_PACKAGE-luci-app-kvm=m
-CONFIG_PACKAGE-luci-app-lxc=m
-CONFIG_PACKAGE-luci-app-frpc=m
-CONFIG_PACKAGE-luci-app-zerotier=m
-CONFIG_PACKAGE-luci-app-wireguard=m
-CONFIG_PACKAGE-luci-app-nps=m
-CONFIG_PACKAGE-luci-app-alist=m
-CONFIG_PACKAGE-luci-app-samba4=m
-CONFIG_PACKAGE-luci-app-aria2=m
-CONFIG_PACKAGE-luci-app-qbittorrent=m
-CONFIG_PACKAGE-luci-app-transmission=m
-CONFIG_PACKAGE-luci-app-htop=m
-CONFIG_PACKAGE-luci-app-diskman=m
-CONFIG_PACKAGE-luci-app-wrtbwmon=m
-CONFIG_PACKAGE-luci-app-speedtest-web=m
-CONFIG_PACKAGE-luci-app-netperftest=m
-CONFIG_PACKAGE-luci-app-cpulimit=m
-CONFIG_PACKAGE-luci-app-gameaccelerate=m
-CONFIG_PACKAGE-luci-app-multiacclient=m
-CONFIG_PACKAGE-luci-app-isolateclient=m
-CONFIG_PACKAGE-luci-app-macbind=m
-CONFIG_PACKAGE-luci-app-ipbind=m
-CONFIG_PACKAGE-luci-app-autoreboot=m
-CONFIG_PACKAGE-luci-app-rebootschedule=m
-CONFIG_PACKAGE-luci-app-watchcat=m
-CONFIG_PACKAGE-luci-app-hd-idle=m
-CONFIG_PACKAGE-luci-app-wol=m
-CONFIG_PACKAGE-luci-app-qos=m
-CONFIG_PACKAGE-luci-app-port-forward=m
-CONFIG_PACKAGE-luci-app-parentcontrol=m
-CONFIG_PACKAGE-luci-app-urlfilter=m
+CONFIG_PACKAGE_luci-app-passwall=m
+CONFIG_PACKAGE_luci-app-openclash=m
+CONFIG_PACKAGE_luci-app-ssr-plus=m
+CONFIG_PACKAGE_luci-app-hysteria=m
+CONFIG_PACKAGE_luci-app-v2raya=m
+CONFIG_PACKAGE_luci-app-adguardhome=m
+CONFIG_PACKAGE_luci-app-smartdns=m
+CONFIG_PACKAGE_luci-app-adblock=m
+CONFIG_PACKAGE_luci-app-dnsfilter=m
+CONFIG_PACKAGE_luci-app-mwan3=m
+CONFIG_PACKAGE_luci-app-turboccm=m
+CONFIG_PACKAGE_luci-app-flowoffload=m
+CONFIG_PACKAGE_luci-app-syncdial=m
+CONFIG_PACKAGE_luci-app-multiwan=m
+CONFIG_PACKAGE_luci-app-dockerman=m
+CONFIG_PACKAGE_luci-app-kvm=m
+CONFIG_PACKAGE_luci-app-lxc=m
+CONFIG_PACKAGE_luci-app-frpc=m
+CONFIG_PACKAGE_luci-app-zerotier=m
+CONFIG_PACKAGE_luci-app-wireguard=m
+CONFIG_PACKAGE_luci-app-nps=m
+CONFIG_PACKAGE_luci-app-alist=m
+CONFIG_PACKAGE_luci-app-samba4=m
+CONFIG_PACKAGE_luci-app-aria2=m
+CONFIG_PACKAGE_luci-app-qbittorrent=m
+CONFIG_PACKAGE_luci-app-transmission=m
+CONFIG_PACKAGE_luci-app-htop=m
+CONFIG_PACKAGE_luci-app-diskman=m
+CONFIG_PACKAGE_luci-app-wrtbwmon=m
+CONFIG_PACKAGE_luci-app-speedtest-web=m
+CONFIG_PACKAGE_luci-app-netperftest=m
+CONFIG_PACKAGE_luci-app-cpulimit=m
+CONFIG_PACKAGE_luci-app-gameaccelerate=m
+CONFIG_PACKAGE_luci-app-multiacclient=m
+CONFIG_PACKAGE_luci-app-isolateclient=m
+CONFIG_PACKAGE_luci-app-macbind=m
+CONFIG_PACKAGE_luci-app-ipbind=m
+CONFIG_PACKAGE_luci-app-autoreboot=m
+CONFIG_PACKAGE_luci-app-rebootschedule=m
+CONFIG_PACKAGE_luci-app-watchcat=m
+CONFIG_PACKAGE_luci-app-hd-idle=m
+CONFIG_PACKAGE_luci-app-wol=m
+CONFIG_PACKAGE_luci-app-qos=m
+CONFIG_PACKAGE_luci-app-port-forward=m
+CONFIG_PACKAGE_luci-app-parentcontrol=m
+CONFIG_PACKAGE_luci-app-urlfilter=m
 CONFIG_PACKAGE_kmod-usb-modeswitch=m
 CONFIG_PACKAGE_kmod-usb-storage=m
 CONFIG_PACKAGE_kmod-usb-net-rndis=m
 CONFIG_PACKAGE_kmod-usb-net-cdc-eem=m
 CONFIG_PACKAGE_kmod-usb-net-cdc-ether=m
-CONFIG_PACKAGE-luci-app-homeassistant=m
-CONFIG_PACKAGE-luci-app-tuya=m
-CONFIG_PACKAGE-luci-app-lucky=m
-CONFIG_PACKAGE-luci-app-syncthing=m
-CONFIG_PACKAGE-luci-app-resilio=m
-CONFIG_PACKAGE-luci-app-rsyncd=m
-CONFIG_PACKAGE-luci-app-dingtalk=m
-CONFIG_PACKAGE-luci-app-wechatpush=m
-CONFIG_PACKAGE-luci-app-telegram=m
-CONFIG_PACKAGE-luci-app-filetransfer=m
-CONFIG_PACKAGE-luci-app-logview=m
+CONFIG_PACKAGE_luci-app-homeassistant=m
+CONFIG_PACKAGE_luci-app-tuya=m
+CONFIG_PACKAGE_luci-app-lucky=m
+CONFIG_PACKAGE_luci-app-syncthing=m
+CONFIG_PACKAGE_luci-app-resilio=m
+CONFIG_PACKAGE_luci-app-rsyncd=m
+CONFIG_PACKAGE_luci-app-dingtalk=m
+CONFIG_PACKAGE_luci-app-wechatpush=m
+CONFIG_PACKAGE_luci-app-telegram=m
+CONFIG_PACKAGE_luci-app-filetransfer=m
+CONFIG_PACKAGE_luci-app-logview=m
 EOF
           make defconfig
 
@@ -131,7 +131,7 @@ EOF
           name: X86_8G+512M满配全能固件
           path: openwrt/bin/targets/x86/
 
-      # 1.GitHub 仓库评论推送
+      # 1. GitHub 仓库评论推送
       - name: GitHub站内消息通知
         if: always()
         uses: actions/github-script@v7
@@ -146,19 +146,19 @@ EOF
               body: info
             });
 
-      # 2.微信推送（Server酱）
+      # 2. 微信推送（Server酱）
       - name: 微信推送通知
         if: always()
         run: |
           curl -s "https://sctapi.ftqq.com/填你的SCKEY.send?title=OpenWrt固件编译提醒&desp=定时编译已完成，运行状态：${{job.status}}"
 
-      # 3.QQ推送
+      # 3. QQ推送
       - name: QQ推送通知
         if: always()
         run: |
           curl -s "https://qmsg.zendee.cn/send/填你的QQ推送密钥?msg=X86满配固件每月编译完毕，结果：${{job.status}}"
 
-      # 4.钉钉机器人推送
+      # 4. 钉钉机器人推送
       - name: 钉钉推送通知
         if: always()
         run: |
