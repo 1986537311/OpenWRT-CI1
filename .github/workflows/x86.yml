@@ -1,12 +1,13 @@
 name: X86终极全能满配编译
+
 on:
   schedule:
     - cron: '0 2 1 * *'  # 每月1号凌晨2点自动构建
-  workflow_dispatch:     # 支持手动触发
+  workflow_dispatch:    # 支持手动触发
 
 env:
   TZ: Asia/Shanghai
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 提前解决Node.js 20废弃警告
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 解决Node.js 20废弃警告
   OPENWRT_BRANCH: openwrt-25.12             # 统一分支变量，避免手动修改出错
 
 permissions:
@@ -35,15 +36,15 @@ jobs:
           pip3 install pyelftools
           ccache --max-size=16G
 
-      - name: 拉取25.12最新稳定源码（修复版）
+      - name: 拉取25.12最新稳定源码
         run: |
           git clone https://github.com/openwrt/openwrt.git -b ${{ env.OPENWRT_BRANCH }} openwrt
           cd openwrt
           git config --global user.name github-auto
           git config --global user.email github@qq.com
 
-      - name: 高速编译缓存（修复版）
-        uses: actions/cache@v4  # 升级到v4，支持Node.js 24
+      - name: 高速编译缓存
+        uses: actions/cache@v4
         with:
           path: |
             openwrt/dl
@@ -75,11 +76,11 @@ jobs:
         run: |
           echo "RUN_BUILD=true" >> $GITHUB_ENV
 
-      - name: 写入全部完整插件配置（修复版）
+      - name: 写入全部完整插件配置
         if: ${{ env.RUN_BUILD == 'true' }}
         run: |
           cd openwrt
-          # 修复sed命令，添加feeds.conf配置
+          # 修复feeds命令，更新kenzok8源地址
           sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
           sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
           ./scripts/feeds update -a
@@ -96,80 +97,80 @@ jobs:
           echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
           echo "CONFIG_PACKAGE_luci-theme-bootstrap=m" >> .config
 
-          # 网络与插件配置（完整保留你的列表，修正引号闭合）
-          echo "CONFIG_PACKAGE_luci-app-ttyd=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-cron=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-commands=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-store=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-iStore=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-passwall=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-openclash=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ssr-plus=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-hysteria=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-v2raya=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-adguardhome=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-smartdns=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-adblock=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-dnsfilter=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-mwan3=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-turboacc=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-flowoffload=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-syncdial=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-multiwan=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-dockerman=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-kvm=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-lxc=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-frpc=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-zerotier=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wireguard=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-nps=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-alist=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-samba4=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-aria2=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-qbittorrent=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-transmission=m" >> .config
-          echo "CONFIG_PACKAGE_htop=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-diskman=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wrtbwmon=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-speedtest-web=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-netspeedtest=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-cpulimit=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-gameaccelerate=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-multiacclient=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-isolateclient=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-macbind=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ipbind=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-autoreboot=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-rebootschedule=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-watchcat=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-hd-idle=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wol=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-qos=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-port-forward=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-parentcontrol=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-urlfilter=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ipsec-vpn=m" >> .config
-          echo "CONFIG_PACKAGE_usb-modeswitch=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-net-rndis=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-net-cdc-ether=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-usb-hid=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-homeassistant=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-miio=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-tuya=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-luciot=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-syncthing=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-resilio=m" >> .config
-          echo "CONFIG_PACKAGE_rsync=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-rsyncd=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wechatpush=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-dingtalk=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-telegram=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-vlmcsd=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-filetransfer=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-logview=m" >> .config
-          echo "CONFIG_LUCI_INDEX_DOWNLOAD_BTN8=y" >> .config
-          echo "CONFIG_LUCI_INDEX_BTN_COUNT=8" >> .config
+          # 网络与插件配置（完整保留你的列表，修正引号问题）
+          cat >> .config << EOF
+          CONFIG_PACKAGE_luci-app-ttyd=m
+          CONFIG_PACKAGE_luci-app-cron=m
+          CONFIG_PACKAGE_luci-app-commands=m
+          CONFIG_PACKAGE_luci-app-store=m
+          CONFIG_PACKAGE_luci-app-iStore=m
+          CONFIG_PACKAGE_luci-app-passwall=m
+          CONFIG_PACKAGE_luci-app-openclash=m
+          CONFIG_PACKAGE_luci-app-ssr-plus=m
+          CONFIG_PACKAGE_luci-app-hysteria=m
+          CONFIG_PACKAGE_luci-app-v2raya=m
+          CONFIG_PACKAGE_luci-app-adguardhome=m
+          CONFIG_PACKAGE_luci-app-smartdns=m
+          CONFIG_PACKAGE_luci-app-adblock=m
+          CONFIG_PACKAGE_luci-app-dnsfilter=m
+          CONFIG_PACKAGE_luci-app-mwan3=m
+          CONFIG_PACKAGE_luci-app-turboccm=m
+          CONFIG_PACKAGE_luci-app-flowoffload=m
+          CONFIG_PACKAGE_luci-app-syncdial=m
+          CONFIG_PACKAGE_luci-app-multiwan=m
+          CONFIG_PACKAGE_luci-app-dockerman=m
+          CONFIG_PACKAGE_luci-app-kvm=m
+          CONFIG_PACKAGE_luci-app-lxc=m
+          CONFIG_PACKAGE_luci-app-frpc=m
+          CONFIG_PACKAGE_luci-app-zerotier=m
+          CONFIG_PACKAGE_luci-app-wireguard=m
+          CONFIG_PACKAGE_luci-app-nps=m
+          CONFIG_PACKAGE_luci-app-alist=m
+          CONFIG_PACKAGE_luci-app-samba4=m
+          CONFIG_PACKAGE_luci-app-aria2=m
+          CONFIG_PACKAGE_luci-app-qbittorrent=m
+          CONFIG_PACKAGE_luci-app-transmission=m
+          CONFIG_PACKAGE_luci-app-htop=m
+          CONFIG_PACKAGE_luci-app-diskman=m
+          CONFIG_PACKAGE_luci-app-wrtbwmon=m
+          CONFIG_PACKAGE_luci-app-speedtest-web=m
+          CONFIG_PACKAGE_luci-app-netperftest=m
+          CONFIG_PACKAGE_luci-app-cpulimit=m
+          CONFIG_PACKAGE_luci-app-gameaccelerate=m
+          CONFIG_PACKAGE_luci-app-multiacclient=m
+          CONFIG_PACKAGE_luci-app-isolateclient=m
+          CONFIG_PACKAGE_luci-app-macbind=m
+          CONFIG_PACKAGE_luci-app-ipbind=m
+          CONFIG_PACKAGE_luci-app-autoreboot=m
+          CONFIG_PACKAGE_luci-app-rebootschedule=m
+          CONFIG_PACKAGE_luci-app-watchcat=m
+          CONFIG_PACKAGE_luci-app-hd-idle=m
+          CONFIG_PACKAGE_luci-app-wol=m
+          CONFIG_PACKAGE_luci-app-qos=m
+          CONFIG_PACKAGE_luci-app-port-forward=m
+          CONFIG_PACKAGE_luci-app-parentcontrol=m
+          CONFIG_PACKAGE_luci-app-urlfilter=m
+          CONFIG_PACKAGE_luci-app-inspec-vpn=m
+          CONFIG_PACKAGE_kmod-usb-modeswitch=m
+          CONFIG_PACKAGE_kmod-usb-storage=m
+          CONFIG_PACKAGE_kmod-usb-net-rndis=m
+          CONFIG_PACKAGE_kmod-usb-net-cdc-eem=m
+          CONFIG_PACKAGE_kmod-usb-net-cdc-ether=m
+          CONFIG_PACKAGE_luci-app-miiom=m
+          CONFIG_PACKAGE_luci-app-homeassistant=m
+          CONFIG_PACKAGE_luci-app-tuya=m
+          CONFIG_PACKAGE_luci-app-lucky=m
+          CONFIG_PACKAGE_luci-app-syncthing=m
+          CONFIG_PACKAGE_luci-app-resilio=m
+          CONFIG_PACKAGE_luci-app-rsyncd=m
+          CONFIG_PACKAGE_luci-app-dingtalk=m
+          CONFIG_PACKAGE_luci-app-wechatpush=m
+          CONFIG_PACKAGE_luci-app-telegram=m
+          CONFIG_PACKAGE_luci-app-filetransfer=m
+          CONFIG_PACKAGE_luci-app-logview=m
+          CONFIG_PACKAGE_CONFIG_LUCI_INDEX_DOWNLOAD_BTN=8
+          CONFIG_PACKAGE_CONFIG_LUCI_INDEX_BTN_COUNT=8
+          EOF
 
           make defconfig
 
@@ -186,17 +187,17 @@ jobs:
         if: ${{ env.RUN_BUILD == 'true' }}
         uses: actions/upload-artifact@v4
         with:
-          name: 25.12.4-X86终极全集满配固件
+          name: 25.12.4-X86终极全能满配固件
           path: openwrt/bin/targets/x86/
 
-      - name: GitHub站内评论通知
+      - name: Github站内评论通知
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
             const status = context.jobStatus === 'success' ? '✅ 成功' : '❌ 失败';
             const time = new Date().toLocaleString('zh-CN');
-            const body = `[25.12.4终极满配固件] 构建状态：${status}\n构建时间：${time}`;
+            const body = `[25.12.4终极满配固件] 构建状态: ${status}\n构建时间: ${time}`;
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -207,4 +208,4 @@ jobs:
       - name: 第三方消息推送通知
         if: always()
         run: |
-          curl -s "https://push.ft07.com/send/替换你的推送密钥.send?text=OpenWrt构建通知&desp=25.12.4固件构建完成，状态：${{ job.status }}"
+          curl -s "https://push.ft07.com/send/替换你的推送密钥.send?text=OpenWrt构建通知&desp=OpenWrt 25.12.4固件构建完成，状态: ${{ job.status }}"
