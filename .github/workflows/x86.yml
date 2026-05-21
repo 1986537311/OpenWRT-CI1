@@ -15,22 +15,22 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: 清理空间
+      - name: 清理多余磁盘空间
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo apt-get clean
 
-      - name: 安装依赖
+      - name: 安装编译全套依赖
         run: |
           sudo apt update -y
           sudo apt install -y build-essential flex bison gawk libssl-dev libelf-dev
           pip3 install pyelftools
 
-      - name: 拉取源码
+      - name: 拉取OpenWrt源码（GitHub官方镜像）
         run: |
-          git clone https://gitlab.com/openwrt-mirror/openwrt.git -b ${{env.BRANCH}} openwrt
+          git clone https://github.com/openwrt/openwrt.git -b ${{env.BRANCH}} openwrt
 
-      - name: 添加国内插件源
+      - name: 配置国内全插件源
         run: |
           cd openwrt
           sed -i '$a src-git kenzo https://gitlab.com/chenmozhijin/openwrt-packages.git' feeds.conf.default
@@ -38,7 +38,7 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: 写入分区与全部插件
+      - name: 写入分区与全部插件（无EOF/无红线）
         run: |
           cd openwrt
           echo "CONFIG_TARGET_KERNEL_PARTSIZE=8192" >> .config
@@ -63,7 +63,7 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-adblock=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-dnsfilter=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-mwan3=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-turboccm=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-turboccm=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-flowoffload=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-syncdial=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-multiwan=m" >> .config
@@ -75,7 +75,7 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-wireguard=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-nps=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-alist=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-samba4=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-samba4=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-aria2=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-qbittorrent=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-transmission=m" >> .config
@@ -117,34 +117,33 @@ jobs:
           echo "CONFIG_PACKAGE_luci-app-logview=m" >> .config
           make defconfig
 
-      - name: 启动编译
+      - name: 正式编译固件
         run: |
           cd openwrt
           make -j$(nproc) V=s
 
-      - name: 上传固件
+      - name: 上传编译好的固件
         uses: actions/upload-artifact@v4
         with:
-          name: X86_8G+512M满配固件
+          name: X86_8G+512M满配全能固件
           path: openwrt/bin/targets/x86/
 
-      - name: GitHub消息通知
-        if: always()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            let status=context.jobStatus==='success'?'✅编译成功':'❌编译失败';
-            github.rest.issues.createComment({owner:context.repo.owner,repo:context.repo.repo,issue_number:1,body:`每月2点自动编译完成：${status}`});
-
-      - name: 微信推送
-        if: always()
-        run: curl -s "https://sctapi.ftqq.com/替换你的微信KEY.send?title=固件编译通知&desp=状态：${{job.status}}"
-
-      - name: QQ推送
-        if: always()
-        run: curl -s "https://qmsg.zendee.cn/send/替换你的QQKEY?msg=OpenWrt编译结果：${{job.status}}"
-
-      - name: 钉钉推送
+      # 2. 微信推送（Server酱）
+      - name: 微信推送通知
         if: always()
         run: |
-          curl -s https://oapi.dingtalk.com/robot/send?access_token=替换钉钉TOKEN -H "Content-Type:application/json" -d '{"msgtype":"text","text":{"content":"每月定时固件编译完成，状态：${{job.status}}"}}'
+          curl -s "https://sctapi.ftqq.com/填你的SCKEY.send?title=OpenWrt固件编译提醒&desp=定时编译已完成，运行状态：${{job.status}}"
+
+      # 3. QQ推送
+      - name: QQ推送通知
+        if: always()
+        run: |
+          curl -s "https://qmsg.zendee.cn/send/填你的QQ推送密钥?msg=X86满配固件每月编译完毕，结果：${{job.status}}"
+
+      # 4. 钉钉机器人推送
+      - name: 钉钉推送通知
+        if: always()
+        run: |
+          curl -s https://oapi.dingtalk.com/robot/send?access_token=填你的钉钉机器人TOKEN \
+          -H "Content-Type: application/json" \
+          -d '{"msgtype":"text","text":{"content":"OpenWrt每月自动编译完成，当前状态：${{job.status}}"}}'
