@@ -1,211 +1,167 @@
-name: X86终极全能满配编译
-
+name: X86满配OpenWrt每月编译
 on:
   schedule:
-    - cron: '0 2 1 * *'  # 每月1号凌晨2点自动构建
-  workflow_dispatch:    # 支持手动触发
+    - cron: '0 2 1 * *'
+  workflow_dispatch:
 
 env:
   TZ: Asia/Shanghai
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 解决Node.js 20废弃警告
-  OPENWRT_BRANCH: openwrt-25.12             # 统一分支变量，避免手动修改出错
-
-permissions:
-  actions: write
-  contents: read
-  issues: write
+  BRANCH: openwrt-25.12
 
 jobs:
   build:
     runs-on: ubuntu-22.04
     timeout-minutes: 360
     steps:
-      - name: 拉取仓库代码
-        uses: actions/checkout@v5  # 升级到v5，支持Node.js 24
+      - uses: actions/checkout@v5
 
-      - name: 释放多余磁盘空间
+      - name: 清理多余磁盘空间
         run: |
           sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo apt-get clean
-          df -h
 
-      - name: 安装全套编译依赖
+      - name: 安装编译全套依赖
         run: |
           sudo apt update -y
           sudo apt install -y build-essential flex bison gawk libssl-dev libelf-dev
           pip3 install pyelftools
-          ccache --max-size=16G
 
-      - name: 拉取25.12最新稳定源码
+      - name: 拉取国内镜像源码
         run: |
-          git clone https://github.com/openwrt/openwrt.git -b ${{ env.OPENWRT_BRANCH }} openwrt
-          cd openwrt
-          git config --global user.name github-auto
-          git config --global user.email github@qq.com
+          git clone https://gitlab.com/openwrt-mirror/openwrt.git -b ${{env.BRANCH}} openwrt
 
-      - name: 高速编译缓存
-        uses: actions/cache@v4
-        with:
-          path: |
-            openwrt/dl
-            openwrt/.ccache
-            openwrt/build_dir
-            openwrt/staging_dir
-            openwrt/package/feeds
-          key: openwrt-${{ env.OPENWRT_BRANCH }}-${{ hashFiles('openwrt/.config') }}
-          restore-keys: |
-            openwrt-${{ env.OPENWRT_BRANCH }}-
-
-      - name: 定时检测上游自动更新
-        if: github.event_name == 'schedule'
+      - name: 配置国内全插件源
         run: |
           cd openwrt
-          git fetch origin
-          LOCAL=$(git rev-parse HEAD)
-          REMOTE=$(git rev-parse origin/${{ env.OPENWRT_BRANCH }})
-          if [ "$LOCAL" = "$REMOTE" ]; then
-            echo "RUN_BUILD=false" >> $GITHUB_ENV
-            echo "上游无更新，跳过构建"
-          else
-            echo "RUN_BUILD=true" >> $GITHUB_ENV
-            echo "上游有更新，执行构建"
-          fi
-
-      - name: 手动一键强制编译
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          echo "RUN_BUILD=true" >> $GITHUB_ENV
-
-      - name: 写入全部完整插件配置
-        if: ${{ env.RUN_BUILD == 'true' }}
-        run: |
-          cd openwrt
-          # 修复feeds命令，更新kenzok8源地址
-          sed -i '$a src-git kenzo https://github.com/kenzok8/openwrt-packages' feeds.conf.default
-          sed -i '$a src-git small https://github.com/kenzok8/small' feeds.conf.default
+          sed -i '$a src-git kenzo https://gitlab.com/chenmozhijin/openwrt-packages.git' feeds.conf.default
+          sed -i '$a src-git small https://gitlab.com/chenmozhijin/small.git' feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-          # 分区配置
+      - name: 写入分区大小+全套插件配置
+        run: |
+          cd openwrt
           echo "CONFIG_TARGET_KERNEL_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_SWAP_PARTSIZE=512" >> .config
 
-          # 核心基础配置
-          echo "CONFIG_PACKAGE_luci=m" >> .config
-          echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=m" >> .config
-          echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
-          echo "CONFIG_PACKAGE_luci-theme-bootstrap=m" >> .config
-
-          # 网络与插件配置（完整保留你的列表，修正引号问题）
-          cat >> .config << EOF
-          CONFIG_PACKAGE_luci-app-ttyd=m
-          CONFIG_PACKAGE_luci-app-cron=m
-          CONFIG_PACKAGE_luci-app-commands=m
-          CONFIG_PACKAGE_luci-app-store=m
-          CONFIG_PACKAGE_luci-app-iStore=m
-          CONFIG_PACKAGE_luci-app-passwall=m
-          CONFIG_PACKAGE_luci-app-openclash=m
-          CONFIG_PACKAGE_luci-app-ssr-plus=m
-          CONFIG_PACKAGE_luci-app-hysteria=m
-          CONFIG_PACKAGE_luci-app-v2raya=m
-          CONFIG_PACKAGE_luci-app-adguardhome=m
-          CONFIG_PACKAGE_luci-app-smartdns=m
-          CONFIG_PACKAGE_luci-app-adblock=m
-          CONFIG_PACKAGE_luci-app-dnsfilter=m
-          CONFIG_PACKAGE_luci-app-mwan3=m
-          CONFIG_PACKAGE_luci-app-turboccm=m
-          CONFIG_PACKAGE_luci-app-flowoffload=m
-          CONFIG_PACKAGE_luci-app-syncdial=m
-          CONFIG_PACKAGE_luci-app-multiwan=m
-          CONFIG_PACKAGE_luci-app-dockerman=m
-          CONFIG_PACKAGE_luci-app-kvm=m
-          CONFIG_PACKAGE_luci-app-lxc=m
-          CONFIG_PACKAGE_luci-app-frpc=m
-          CONFIG_PACKAGE_luci-app-zerotier=m
-          CONFIG_PACKAGE_luci-app-wireguard=m
-          CONFIG_PACKAGE_luci-app-nps=m
-          CONFIG_PACKAGE_luci-app-alist=m
-          CONFIG_PACKAGE_luci-app-samba4=m
-          CONFIG_PACKAGE_luci-app-aria2=m
-          CONFIG_PACKAGE_luci-app-qbittorrent=m
-          CONFIG_PACKAGE_luci-app-transmission=m
-          CONFIG_PACKAGE_luci-app-htop=m
-          CONFIG_PACKAGE_luci-app-diskman=m
-          CONFIG_PACKAGE_luci-app-wrtbwmon=m
-          CONFIG_PACKAGE_luci-app-speedtest-web=m
-          CONFIG_PACKAGE_luci-app-netperftest=m
-          CONFIG_PACKAGE_luci-app-cpulimit=m
-          CONFIG_PACKAGE_luci-app-gameaccelerate=m
-          CONFIG_PACKAGE_luci-app-multiacclient=m
-          CONFIG_PACKAGE_luci-app-isolateclient=m
-          CONFIG_PACKAGE_luci-app-macbind=m
-          CONFIG_PACKAGE_luci-app-ipbind=m
-          CONFIG_PACKAGE_luci-app-autoreboot=m
-          CONFIG_PACKAGE_luci-app-rebootschedule=m
-          CONFIG_PACKAGE_luci-app-watchcat=m
-          CONFIG_PACKAGE_luci-app-hd-idle=m
-          CONFIG_PACKAGE_luci-app-wol=m
-          CONFIG_PACKAGE_luci-app-qos=m
-          CONFIG_PACKAGE_luci-app-port-forward=m
-          CONFIG_PACKAGE_luci-app-parentcontrol=m
-          CONFIG_PACKAGE_luci-app-urlfilter=m
-          CONFIG_PACKAGE_luci-app-inspec-vpn=m
-          CONFIG_PACKAGE_kmod-usb-modeswitch=m
-          CONFIG_PACKAGE_kmod-usb-storage=m
-          CONFIG_PACKAGE_kmod-usb-net-rndis=m
-          CONFIG_PACKAGE_kmod-usb-net-cdc-eem=m
-          CONFIG_PACKAGE_kmod-usb-net-cdc-ether=m
-          CONFIG_PACKAGE_luci-app-miiom=m
-          CONFIG_PACKAGE_luci-app-homeassistant=m
-          CONFIG_PACKAGE_luci-app-tuya=m
-          CONFIG_PACKAGE_luci-app-lucky=m
-          CONFIG_PACKAGE_luci-app-syncthing=m
-          CONFIG_PACKAGE_luci-app-resilio=m
-          CONFIG_PACKAGE_luci-app-rsyncd=m
-          CONFIG_PACKAGE_luci-app-dingtalk=m
-          CONFIG_PACKAGE_luci-app-wechatpush=m
-          CONFIG_PACKAGE_luci-app-telegram=m
-          CONFIG_PACKAGE_luci-app-filetransfer=m
-          CONFIG_PACKAGE_luci-app-logview=m
-          CONFIG_PACKAGE_CONFIG_LUCI_INDEX_DOWNLOAD_BTN=8
-          CONFIG_PACKAGE_CONFIG_LUCI_INDEX_BTN_COUNT=8
-          EOF
-
+          cat >> .config <<EOF
+CONFIG_PACKAGE_luci=m
+CONFIG_PACKAGE_luci-i18n-base-zh-cn=m
+CONFIG_PACKAGE_luci-theme-argon=m
+CONFIG_PACKAGE_luci-theme-bootstrap=m
+CONFIG_PACKAGE_luci-app-ttyd=m
+CONFIG_PACKAGE_luci-app-cron=m
+CONFIG_PACKAGE_luci-app-commands=m
+CONFIG_PACKAGE_luci-app-store=m
+CONFIG_PACKAGE_luci-app-iStore=m
+CONFIG_PACKAGE-luci-app-passwall=m
+CONFIG_PACKAGE-luci-app-openclash=m
+CONFIG_PACKAGE-luci-app-ssr-plus=m
+CONFIG_PACKAGE-luci-app-hysteria=m
+CONFIG_PACKAGE-luci-app-v2raya=m
+CONFIG_PACKAGE-luci-app-adguardhome=m
+CONFIG_PACKAGE-luci-app-smartdns=m
+CONFIG_PACKAGE-luci-app-adblock=m
+CONFIG_PACKAGE-luci-app-dnsfilter=m
+CONFIG_PACKAGE-luci-app-mwan3=m
+CONFIG_PACKAGE-luci-app-turboccm=m
+CONFIG_PACKAGE-luci-app-flowoffload=m
+CONFIG_PACKAGE-luci-app-syncdial=m
+CONFIG_PACKAGE-luci-app-multiwan=m
+CONFIG_PACKAGE-luci-app-dockerman=m
+CONFIG_PACKAGE-luci-app-kvm=m
+CONFIG_PACKAGE-luci-app-lxc=m
+CONFIG_PACKAGE-luci-app-frpc=m
+CONFIG_PACKAGE-luci-app-zerotier=m
+CONFIG_PACKAGE-luci-app-wireguard=m
+CONFIG_PACKAGE-luci-app-nps=m
+CONFIG_PACKAGE-luci-app-alist=m
+CONFIG_PACKAGE-luci-app-samba4=m
+CONFIG_PACKAGE-luci-app-aria2=m
+CONFIG_PACKAGE-luci-app-qbittorrent=m
+CONFIG_PACKAGE-luci-app-transmission=m
+CONFIG_PACKAGE-luci-app-htop=m
+CONFIG_PACKAGE-luci-app-diskman=m
+CONFIG_PACKAGE-luci-app-wrtbwmon=m
+CONFIG_PACKAGE-luci-app-speedtest-web=m
+CONFIG_PACKAGE-luci-app-netperftest=m
+CONFIG_PACKAGE-luci-app-cpulimit=m
+CONFIG_PACKAGE-luci-app-gameaccelerate=m
+CONFIG_PACKAGE-luci-app-multiacclient=m
+CONFIG_PACKAGE-luci-app-isolateclient=m
+CONFIG_PACKAGE-luci-app-macbind=m
+CONFIG_PACKAGE-luci-app-ipbind=m
+CONFIG_PACKAGE-luci-app-autoreboot=m
+CONFIG_PACKAGE-luci-app-rebootschedule=m
+CONFIG_PACKAGE-luci-app-watchcat=m
+CONFIG_PACKAGE-luci-app-hd-idle=m
+CONFIG_PACKAGE-luci-app-wol=m
+CONFIG_PACKAGE-luci-app-qos=m
+CONFIG_PACKAGE-luci-app-port-forward=m
+CONFIG_PACKAGE-luci-app-parentcontrol=m
+CONFIG_PACKAGE-luci-app-urlfilter=m
+CONFIG_PACKAGE_kmod-usb-modeswitch=m
+CONFIG_PACKAGE_kmod-usb-storage=m
+CONFIG_PACKAGE_kmod-usb-net-rndis=m
+CONFIG_PACKAGE_kmod-usb-net-cdc-eem=m
+CONFIG_PACKAGE_kmod-usb-net-cdc-ether=m
+CONFIG_PACKAGE-luci-app-homeassistant=m
+CONFIG_PACKAGE-luci-app-tuya=m
+CONFIG_PACKAGE-luci-app-lucky=m
+CONFIG_PACKAGE-luci-app-syncthing=m
+CONFIG_PACKAGE-luci-app-resilio=m
+CONFIG_PACKAGE-luci-app-rsyncd=m
+CONFIG_PACKAGE-luci-app-dingtalk=m
+CONFIG_PACKAGE-luci-app-wechatpush=m
+CONFIG_PACKAGE-luci-app-telegram=m
+CONFIG_PACKAGE-luci-app-filetransfer=m
+CONFIG_PACKAGE-luci-app-logview=m
+EOF
           make defconfig
 
-      - name: 全速极限编译
-        if: ${{ env.RUN_BUILD == 'true' }}
+      - name: 正式编译固件
         run: |
           cd openwrt
-          export PATH=/usr/lib/ccache:$PATH
-          export CCACHE_DIR=$(pwd)/.ccache
-          export CCACHE_MAXSIZE=16G
-          make -j$(nproc) -O V=sc
+          make -j$(nproc) V=s
 
-      - name: 上传固件到Artifacts
-        if: ${{ env.RUN_BUILD == 'true' }}
+      - name: 上传编译好的固件
         uses: actions/upload-artifact@v4
         with:
-          name: 25.12.4-X86终极全能满配固件
+          name: X86_8G+512M满配全能固件
           path: openwrt/bin/targets/x86/
 
-      - name: Github站内评论通知
+      # 1.GitHub 仓库评论推送
+      - name: GitHub站内消息通知
         if: always()
         uses: actions/github-script@v7
         with:
           script: |
-            const status = context.jobStatus === 'success' ? '✅ 成功' : '❌ 失败';
-            const time = new Date().toLocaleString('zh-CN');
-            const body = `[25.12.4终极满配固件] 构建状态: ${status}\n构建时间: ${time}`;
+            let status = context.jobStatus === 'success' ? '✅ 编译成功' : '❌ 编译失败';
+            let info = `【每月凌晨2点自动编译】\n固件状态：${status}\n编译分支：${process.env.BRANCH}`;
             github.rest.issues.createComment({
               owner: context.repo.owner,
               repo: context.repo.repo,
               issue_number: 1,
-              body: body
+              body: info
             });
 
-      - name: 第三方消息推送通知
+      # 2.微信推送（Server酱）
+      - name: 微信推送通知
         if: always()
         run: |
-          curl -s "https://push.ft07.com/send/替换你的推送密钥.send?text=OpenWrt构建通知&desp=OpenWrt 25.12.4固件构建完成，状态: ${{ job.status }}"
+          curl -s "https://sctapi.ftqq.com/填你的SCKEY.send?title=OpenWrt固件编译提醒&desp=定时编译已完成，运行状态：${{job.status}}"
+
+      # 3.QQ推送
+      - name: QQ推送通知
+        if: always()
+        run: |
+          curl -s "https://qmsg.zendee.cn/send/填你的QQ推送密钥?msg=X86满配固件每月编译完毕，结果：${{job.status}}"
+
+      # 4.钉钉机器人推送
+      - name: 钉钉推送通知
+        if: always()
+        run: |
+          curl -s https://oapi.dingtalk.com/robot/send?access_token=填你的钉钉机器人TOKEN \
+          -H "Content-Type: application/json" \
+          -d '{"msgtype":"text","text":{"content":"OpenWrt每月自动编译完成，当前状态：${{job.status}}"}}'
