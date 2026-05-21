@@ -1,4 +1,4 @@
-name: X86 OpenWrt 25.12.4 全能稳定编译
+name: X86 OpenWrt 25.12.4 全功能高速固件
 on:
   schedule:
     - cron: '0 2 1 * *'
@@ -7,35 +7,45 @@ on:
 env:
   TZ: Asia/Shanghai
   BRANCH: openwrt-25.12
-  FIRMWARE_NAME: X86_25.12.4_全功能固件
+  FIRMWARE_NAME: X86_25.12.4_防封备份全能固件
+  FORCE_UNSAFE_CONFIGURE: 1
 
 jobs:
   build:
     runs-on: ubuntu-24.04
-    # 拉长超时至600分钟，彻底杜绝超时失败
     timeout-minutes: 600
-    # 限制单核心编译，大幅降低内存占用，防内存崩溃
     steps:
       - uses: actions/checkout@v5
 
       - name: 深度清理冗余空间
         run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /usr/local/share/boost
           sudo apt clean && sudo sync
+          df -h
 
-      - name: 适配新版系统依赖
+      - name: 配置ccache缓存加速
+        uses: actions/cache@v4
+        with:
+          path: ~/.ccache
+          key: openwrt-ccache-${{ env.BRANCH }}-${{ hashFiles('.config') }}
+          restore-keys: |
+            openwrt-ccache-${{ env.BRANCH }}-
+
+      - name: 安装全套编译依赖
         run: |
           sudo apt update -y
           sudo apt install -y build-essential flex bison gawk libssl-dev libelf-dev \
-          libncurses-dev zlib1g-dev lib32gcc-s1 git subversion mercurial \
-          python3-pip python3-setuptools unzip wget curl rsync xz-utils bridge-utils
+          libncurses-dev zlib1g-dev lib32gcc-s1 libc6-dev-i386 git subversion mercurial \
+          python3-pip python3-setuptools unzip wget curl rsync xz-utils bridge-utils ccache
           pip3 install pyelftools
 
-      - name: 拉取25.12最新源码(自动同步25.12.4)
+      - name: 拉取25.12最新源码
         run: |
           git clone https://github.com/openwrt/openwrt.git -b ${{ env.BRANCH }} openwrt
+          cd openwrt
+          git pull origin ${{ env.BRANCH }}
 
-      - name: 加载适配新版插件源
+      - name: 加载插件源
         run: |
           cd openwrt
           echo "src-git kenzo https://github.com/kenzok8/openwrt-packages" >> feeds.conf.default
@@ -43,75 +53,158 @@ jobs:
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
-      - name: 写入全套功能配置
+      - name: 写入配置 仅剔除虚拟机 全功能保留
         run: |
           cd openwrt
           echo "CONFIG_TARGET_KERNEL_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_SWAP_PARTSIZE=512" >> .config
-
           echo "CONFIG_PACKAGE_luci=m" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=m" >> .config
           echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
           echo "CONFIG_PACKAGE-luci-theme-bootstrap=m" >> .config
-
-          # 应用商店
           echo "CONFIG_PACKAGE_luci-app-store=m" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-store-zh-cn=m" >> .config
-
-          # 代理全家桶
           echo "CONFIG_PACKAGE_luci-app-passwall=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-ssr-plus=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-openclash=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-v2raya=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-hysteria=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-trojan-plus=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-wireguard=m" >> .config
-
-          # 游戏防封
+          echo "CONFIG_PACKAGE-luci-app-ssr-plus=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-openclash=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-v2raya=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-hysteria=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-trojan-plus=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-wireguard=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-mwan3=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-pbr=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-syncdial=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-macvlan=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-cpumask=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-bandwidthd=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-upnp=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-flowoffload=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-syncdial=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-pbr=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-macvlan=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-oaf=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-sqm=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-samba4=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-syncthing=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-rclone=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-verysync=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-filebrowser=m" >> .config
+          echo "CONFIG_PACKAGE_libimobiledevice-utils=m" >> .config
+          echo "CONFIG_PACKAGE_usbmuxd=m" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-storage=m" >> .config
           echo "CONFIG_PACKAGE_kmod-usb-net-rndis=m" >> .config
-
-          # 虚拟机多开
-          echo "CONFIG_PACKAGE_luci-app-kvm=m" >> .config
-          echo "CONFIG_PACKAGE_luci-app-lxc=m" >> .config
-          echo "CONFIG_PACKAGE_qemu-system-x86_64=m" >> .config
-          echo "CONFIG_PACKAGE_qemu-img=m" >> .config
-          echo "CONFIG_PACKAGE_libvirt=m" >> .config
-          echo "CONFIG_PACKAGE_bridge-utils=m" >> .config
-          echo "CONFIG_PACKAGE_vlan=m" >> .config
-          echo "CONFIG_PACKAGE_tunctap=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-kvm-intel=m" >> .config
-          echo "CONFIG_PACKAGE_kmod-kvm-amd=m" >> .config
-
+          echo "CONFIG_PACKAGE_kmod-usb-net-ipheth=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-cpumask=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-bandwidthd=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-upnp=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-flowoffload=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-alist=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-aria2=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-qbittorrent=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-autoreboot=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-wol=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-diskman=m" >> .config
+          echo "CONFIG_PACKAGE-luci-app-wrtbwmon=m" >> .config
           make defconfig
 
-      - name: 单线程低内存编译，日志排错
+      - name: 预下载所有依赖包
         run: |
           cd openwrt
-          make -j1 V=s
+          make download -j$(nproc)
 
-      - name: 上传固件成品
+      - name: 三线程高速编译
+        run: |
+          cd openwrt
+          export CCACHE_DIR=~/.ccache
+          export CCACHE_COMPRESS=1
+          export CCACHE_COMPRESSLEVEL=6
+          make -j3 V=s
+
+      - name: 上传编译固件
         uses: actions/upload-artifact@v4
         with:
           name: ${{ env.FIRMWARE_NAME }}
           path: openwrt/bin/targets/x86/
 
-      # 消息推送自行替换密钥
-      - name: 微信推送
+      # 1.微信Server酱
+      - name: 微信Server酱通知
         if: always()
-        run: |
-          curl -s "https://sctapi.ftqq.com/替换你的SCKEY.send?title=25.12.4固件编译&desc=编译结果：${{ job.status }}"
+        run: curl -s "https://sctapi.ftqq.com/替换SCKEY.send?title=固件编译提醒&desc=编译状态：${{ job.status }}"
 
-      - name: QQ推送
+      # 2.QQ消息推送
+      - name: QQ推送通知
         if: always()
-        run: |
-          curl -s "https://qmsg.zendee.cn/send/替换QQ密钥?msg=25.12.4全功能固件编译完成"
+        run: curl -s "https://qmsg.zendee.cn/send/替换QQ密钥?msg=固件编译完成，状态：${{ job.status }}"
+
+      # 3.钉钉机器人
+      - name: 钉钉推送
+        if: always()
+        run: curl -H "Content-Type:application/json" -X POST -d '{"msgtype":"text","text":{"content":"固件编译状态：${{ job.status }}"}}' "https://oapi.dingtalk.com/robot/send?access_token=替换钉钉TOKEN"
+
+      # 4.企业微信
+      - name: 企业微信推送
+        if: always()
+        run: curl -H "Content-Type:application/json" -X POST -d '{"msgtype":"text","text":{"content":"固件编译状态：${{ job.status }}"}}' "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=替换企微KEY"
+
+      # 5.Telegram电报
+      - name: TG电报推送
+        if: always()
+        run: curl -s "https://api.telegram.org/bot替换TG令牌/sendMessage?chat_id=替换会话ID&text=固件编译状态：${{ job.status }}"
+
+      # 6.飞书推送
+      - name: 飞书推送
+        if: always()
+        run: curl -H "Content-Type:application/json" -X POST -d '{"msg_type":"text","content":{"text":"固件编译状态：${{ job.status }}"}}' "https://open.feishu.cn/open-apis/bot/v2/hook/替换飞书密钥"
+
+      # 7.Bark手机弹窗
+      - name: Bark推送
+        if: always()
+        run: curl -s "https://替换BARK密钥.push.site?title=编译通知&body=固件编译状态：${{ job.status }}"
+
+      # 8.PushPlus微信推送
+      - name: PushPlus推送
+        if: always()
+        run: curl -s "https://www.pushplus.plus/send?token=替换PP令牌&title=固件编译&content=运行状态：${{ job.status }}"
+
+      # 9.iGot推送
+      - name: iGot推送
+        if: always()
+        run: curl -s "https://push.hellyw.com/替换iGot密钥?title=编译结束&content=固件编译状态：${{ job.status }}"
+
+      # 10.酷推QQ推送
+      - name: 酷推推送
+        if: always()
+        run: curl -s "https://api.kutui.top/send?token=替换酷推TOKEN&content=固件编译状态：${{ job.status }}"
+
+      # 11.息推推送
+      - name: 息推通知
+        if: always()
+        run: curl -s "https://xpush.top/send?token=替换息推密钥&title=固件编译&content=状态：${{ job.status }}"
+
+      # 12.网易七鱼推送
+      - name: 七鱼推送
+        if: always()
+        run: curl -s "https://push.qiyukf.com/send?appkey=替换七鱼KEY&title=编译提醒&content=${{ job.status }}"
+
+      # 13.方糖推送
+      - name: 方糖推送
+        if: always()
+        run: curl -s "https://fc.sctapi.com/替换方糖KEY.send?title=固件编译&desc=执行结果：${{ job.status }}"
+
+      # 14.微语推送
+      - name: 微语推送
+        if: always()
+        run: curl -s "https://wwu.push.ink/send?key=替换微语密钥&msg=固件编译状态：${{ job.status }}"
+
+      # 15.极简推送
+      - name: 极简推送
+        if: always()
+        run: curl -s "https://jpush.ink/api/send?token=替换极简TOKEN&text=固件编译状态：${{ job.status }}"
+
+      # GitHub 邮件推送
+      - name: 编译结果邮件通知
+        if: always()
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: smtp.qq.com
+          server_port: 465
+          username: 填写你的发件邮箱
+          password: 填写邮箱授权码
+          subject: OpenWrt固件编译任务通知
+          body: 编译任务已结束，当前运行状态：${{ job.status }}
+          to: 填写接收邮箱
+          content_type: text/plain
