@@ -30,11 +30,11 @@ jobs:
         run: |
           git clone https://github.com/openwrt/openwrt.git -b ${{env.BRANCH}} openwrt
 
-      - name: 配置国内全插件源
+      - name: 配置国内全插件源（修复版）
         run: |
           cd openwrt
-          sed -i '$a src-git kenzo https://gitlab.com/chenmozhijin/openwrt-packages.git' feeds.conf.default
-          sed -i '$a src-git small https://gitlab.com/chenmozhijin/small.git' feeds.conf.default
+          echo "src-git kenzo https://gitlab.com/chenmozhijin/openwrt-packages.git" >> feeds.conf.default
+          echo "src-git small https://gitlab.com/chenmozhijin/small.git" >> feeds.conf.default
           ./scripts/feeds update -a
           ./scripts/feeds install -a
 
@@ -128,19 +128,16 @@ jobs:
           name: X86_8G+512M满配全能固件
           path: openwrt/bin/targets/x86/
 
-      # 2. 微信推送（Server酱）
       - name: 微信推送通知
         if: always()
         run: |
           curl -s "https://sctapi.ftqq.com/填你的SCKEY.send?title=OpenWrt固件编译提醒&desp=定时编译已完成，运行状态：${{job.status}}"
 
-      # 3. QQ推送
       - name: QQ推送通知
         if: always()
         run: |
           curl -s "https://qmsg.zendee.cn/send/填你的QQ推送密钥?msg=X86满配固件每月编译完毕，结果：${{job.status}}"
 
-      # 4. 钉钉机器人推送
       - name: 钉钉推送通知
         if: always()
         run: |
