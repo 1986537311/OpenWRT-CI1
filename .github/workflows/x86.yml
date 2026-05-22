@@ -62,27 +62,32 @@ jobs:
           echo "CONFIG_TARGET_ROOTFS_PARTSIZE=8192" >> .config
           echo "CONFIG_TARGET_SWAP_PARTSIZE=512" >> .config
 
+          # 系统界面主题
           echo "CONFIG_PACKAGE_luci=m" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-base-zh-cn=m" >> .config
           echo "CONFIG_PACKAGE_luci-theme-argon=m" >> .config
           echo "CONFIG_PACKAGE_luci-theme-bootstrap=m" >> .config
 
+          # 应用商店
           echo "CONFIG_PACKAGE_luci-app-store=m" >> .config
           echo "CONFIG_PACKAGE_luci-i18n-store-zh-cn=m" >> .config
 
+          # 翻墙/代理全家桶
           echo "CONFIG_PACKAGE_luci-app-passwall=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-ssr-plus=m" >> .config
-          echo "CONFIG_PACKAGE-luci-app-openclash=m" >> .config
+          echo "CONFIG_PACKAGE_luci-app-openclash=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-hysteria=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-trojan-plus=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-v2raya=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-wireguard=m" >> .config
 
-          echo "CONFIG_PACKAGE_docker=m" >> .config
-          echo "CONFIG_PACKAGE_dockerd=m" >> .config
+          # Docker全家桶
           echo "CONFIG_PACKAGE_luci-app-docker=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-dockerman=m" >> .config
+          echo "CONFIG_PACKAGE_docker=m" >> .config
+          echo "CONFIG_PACKAGE_dockerd=m" >> .config
 
+          # 网络增强工具
           echo "CONFIG_PACKAGE_luci-app-mwan3=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-syncdial=m" >> .config
           echo "CONFIG_PACKAGE_luci-app-pbr=m" >> .config
